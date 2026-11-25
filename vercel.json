@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "api/story.js": { "maxDuration": 60 },
+    "api/story/reply.js": { "maxDuration": 60 },
+    "api/scene-prompt.js": { "maxDuration": 60 },
+    "api/scene-image.js": { "maxDuration": 60 }
+  }
+}

@@ -52,6 +52,33 @@ npm run start
 built `dist/` and the same API routes, so this is a complete local production setup, not just a
 static Vite preview.
 
+## Deploy on Vercel
+
+The app is Vercel-ready. Vite builds the frontend under `dist/`, and the same API surface is provided
+as Vercel Functions in `api/`, sharing all business logic through `lib/personaplay-core.mjs`:
+
+- `api/story.js`
+- `api/story/reply.js`
+- `api/scene-prompt.js`
+- `api/scene-image.js`
+- `api/health.js`
+
+Configure these **Environment Variables** on the Vercel project (Production, Preview, and
+Development), then redeploy:
+
+```dotenv
+VENICE_API_KEY=your_venice_inference_key
+VENICE_MODEL=venice-uncensored
+SCENE_IMAGE_URL=https://avijitpalit3--z-image-turbo-zimageservice-fastapi-app.modal.run/generate
+SCENE_IMAGE_WIDTH=720
+SCENE_IMAGE_HEIGHT=1280
+SCENE_IMAGE_STEPS=9
+```
+
+`vercel.json` raises the function limit to 60 seconds because photoreal scene generation can take
+15–45 seconds. On a Vercel plan with a lower function-duration cap, image requests may time out; the
+retry button can be used. `server.mjs` is only the local/VPS server and is not used by Vercel.
+
 ## What it does
 
 - **Blueprint to cast:** one structured Venice call produces the title, setting, premise, user role,
@@ -87,7 +114,11 @@ static Vite preview.
 ## Project structure
 
 ```text
-server.mjs                     Express + Vite middleware + Venice/Modal API calls
+server.mjs                     local Express/Vite server
+api/                           Vercel Functions for production
+lib/personaplay-core.mjs       shared Venice/Modal logic and validation
+lib/serverless.mjs             Vercel request/response helpers
+vercel.json                    function duration configuration
 src/App.jsx                    app-level state, creation, reply flow, localStorage persistence
 src/components/Landing.jsx     first-screen blueprint form and story preview
 src/components/Generating.jsx
