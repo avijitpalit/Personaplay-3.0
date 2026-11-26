@@ -1,5 +1,12 @@
 const STORAGE_KEY = 'personaplay.session.v1';
 
+export const DEFAULT_PROTAGONIST = {
+  age: '22',
+  gender: 'man',
+  pronouns: 'he/him',
+  appearance: 'A 22-year-old man with a quiet, watchful presence and a lean build.'
+};
+
 export function makeId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return `id-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -15,19 +22,61 @@ export function scenePromptForStory(story) {
     .trim();
 }
 
+export function normalizeStory(story) {
+  const protagonist = story?.protagonist || {};
+  return {
+    ...story,
+    protagonist: {
+      age: String(protagonist.age || DEFAULT_PROTAGONIST.age),
+      gender: protagonist.gender || DEFAULT_PROTAGONIST.gender,
+      pronouns: protagonist.pronouns || DEFAULT_PROTAGONIST.pronouns,
+      appearance: protagonist.appearance || DEFAULT_PROTAGONIST.appearance
+    }
+  };
+}
+
+export function normalizeCharacter(character) {
+  return {
+    ...character,
+    appearance:
+      character.appearance ||
+      'They have a distinct, consistent face and build that should not change between images.',
+    outfit: character.outfit || 'Practical clothing suited to the scene.',
+    emotion: character.emotion || 'guarded'
+  };
+}
+
+export function identityLocksFor(characters, presentCharacterIds) {
+  const visible =
+    Array.isArray(presentCharacterIds) && presentCharacterIds.length > 0
+      ? new Set(presentCharacterIds)
+      : new Set(characters.map((character) => character.id));
+
+  return characters
+    .filter((character) => visible.has(character.id))
+    .map(
+      (character) =>
+        `${character.name} — ${character.age}, ${character.pronouns}. Immutable physical identity: ${character.appearance}`
+    )
+    .join('\n');
+}
+
 export function makeSession(story, characters) {
   const now = Date.now();
+  const normalizedStory = normalizeStory(story);
+  const normalizedCharacters = characters.map(normalizeCharacter);
   const openingMessages = [
     {
       id: makeId(),
       type: 'narration',
-      text: story.openingNarration,
+      text: normalizedStory.openingNarration,
       createdAt: now
     },
-    ...characters.map((character, index) => ({
+    ...normalizedCharacters.map((character, index) => ({
       id: makeId(),
       type: 'character',
       characterId: character.id,
+      emotion: character.emotion,
       text: character.openingLine,
       createdAt: now + index + 1
     }))
@@ -35,10 +84,12 @@ export function makeSession(story, characters) {
 
   return {
     id: makeId(),
-    story,
-    characters,
+    story: normalizedStory,
+    characters: normalizedCharacters,
     messages: openingMessages,
-    sceneImagePrompt: scenePromptForStory(story),
+    sceneImagePrompt: scenePromptForStory(normalizedStory),
+    sceneIdentityLocks: identityLocksFor(normalizedCharacters),
+    scenePresentCharacterIds: normalizedCharacters.map((character) => character.id),
     createdAt: now,
     updatedAt: now
   };
@@ -59,10 +110,36 @@ export function loadSession() {
       Array.isArray(session.messages) &&
       session.messages.length > 0;
     if (!valid) return null;
-    if (typeof session.sceneImagePrompt !== 'string' || !session.sceneImagePrompt.trim()) {
-      session.sceneImagePrompt = scenePromptForStory(session.story);
-    }
-    return session;
+
+    const story = normalizeStory(session.story);
+    const characters = session.characters.map(normalizeCharacter);
+    const characterMap = new Map(characters.map((character) => [character.id, character]));
+    const messages = session.messages.map((message) => {
+      if (message.type !== 'character') return message;
+      const character = characterMap.get(message.characterId);
+      return {
+        ...message,
+        emotion: message.emotion || character?.emotion || 'guarded'
+      };
+    });
+
+    return {
+      ...session,
+      story,
+      characters,
+      messages,
+      sceneImagePrompt:
+        typeof session.sceneImagePrompt === 'string' && session.sceneImagePrompt.trim()
+          ? session.sceneImagePrompt
+          : scenePromptForStory(story),
+      sceneIdentityLocks:
+        typeof session.sceneIdentityLocks === 'string'
+          ? session.sceneIdentityLocks
+          : identityLocksFor(characters),
+      scenePresentCharacterIds: Array.isArray(session.scenePresentCharacterIds)
+        ? session.scenePresentCharacterIds
+        : characters.map((character) => character.id)
+    };
   } catch {
     return null;
   }

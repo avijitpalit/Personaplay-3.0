@@ -10,7 +10,15 @@ function headerPrompt(response) {
   }
 }
 
-export default function SceneBackdrop({ prompt, turn, onActiveImage, onStatusChange, onLog }) {
+export default function SceneBackdrop({
+  prompt,
+  identityLocks = '',
+  refreshKey = 0,
+  turn,
+  onActiveImage,
+  onStatusChange,
+  onLog
+}) {
   const [layers, setLayers] = useState(EMPTY_LAYERS);
   const [active, setActive] = useState(0);
   const [status, setStatus] = useState('idle');
@@ -46,7 +54,9 @@ export default function SceneBackdrop({ prompt, turn, onActiveImage, onStatusCha
       details: {
         endpoint: '/api/scene-image',
         trigger,
-        requestPrompt: prompt
+        attempt: refreshKey + 1,
+        requestPrompt: prompt,
+        identityLocks
       }
     });
 
@@ -55,7 +65,7 @@ export default function SceneBackdrop({ prompt, turn, onActiveImage, onStatusCha
         const response = await fetch('/api/scene-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt }),
+          body: JSON.stringify({ prompt, identityLocks }),
           signal: controller.signal
         });
 
@@ -171,7 +181,7 @@ export default function SceneBackdrop({ prompt, turn, onActiveImage, onStatusCha
       cancelled = true;
       controller.abort();
     };
-  }, [prompt]);
+  }, [prompt, identityLocks, refreshKey]);
 
   useEffect(() => () => {
     for (const timer of timersRef.current) window.clearTimeout(timer);

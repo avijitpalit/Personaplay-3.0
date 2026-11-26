@@ -6,6 +6,7 @@ import {
   LoaderCircle,
   Maximize2,
   Menu,
+  RefreshCw,
   RotateCcw,
   ShieldCheck,
   Sparkles,
@@ -68,6 +69,12 @@ function CastPanel({ session, onNewStory, onClose, isOpen }) {
                 {character.age && !/^unknown$/i.test(character.age) ? <span>{character.age}</span> : null}
               </div>
               <p>{character.role}</p>
+              {character.emotion && (
+                <span className="cast-card__emotion">
+                  <span aria-hidden="true" />
+                  {character.emotion}
+                </span>
+              )}
             </div>
             <span className={`cast-card__accent cast-card__accent--${character.accent}`} aria-hidden="true" />
           </article>
@@ -80,6 +87,13 @@ function CastPanel({ session, onNewStory, onClose, isOpen }) {
           You are
         </span>
         <p>{story.yourRole}</p>
+        {story.protagonist && (
+          <div className="your-role__identity">
+            <span>{story.protagonist.age}</span>
+            <span>{story.protagonist.gender}</span>
+            <span>{story.protagonist.pronouns}</span>
+          </div>
+        )}
       </div>
 
       <div className="cast-panel__footer">
@@ -131,6 +145,9 @@ function CharacterMessage({ message, character }) {
         <header className="character-message__meta">
           <span className="character-message__name">{character.name}</span>
           <span className="character-message__role">{character.role}</span>
+          {(message.emotion || character.emotion) && (
+            <span className="character-message__emotion">{message.emotion || character.emotion}</span>
+          )}
         </header>
         <p className="character-message__text">
           <MessageText text={message.text} />
@@ -188,6 +205,7 @@ export default function Chat({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [sceneImageUrl, setSceneImageUrl] = useState('');
   const [sceneImageStatus, setSceneImageStatus] = useState('idle');
+  const [sceneImageRefreshKey, setSceneImageRefreshKey] = useState(0);
   const [sceneViewerOpen, setSceneViewerOpen] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
   const scrollAreaRef = useRef(null);
@@ -260,6 +278,8 @@ export default function Chat({
       <main className="chat-main" id="main">
         <SceneBackdrop
           prompt={sceneImagePrompt}
+          identityLocks={session.sceneIdentityLocks || ''}
+          refreshKey={sceneImageRefreshKey}
           turn={sceneTurn}
           onActiveImage={setSceneImageUrl}
           onStatusChange={setSceneImageStatus}
@@ -306,17 +326,18 @@ export default function Chat({
               </div>
               <span>{characters.length} in the scene</span>
             </div>
-            {sceneImageUrl && (
-              <button
-                className="button button--quiet chat-header__scene"
-                type="button"
-                onClick={() => setSceneViewerOpen(true)}
-                aria-label="View full scene image"
-              >
-                <Maximize2 size={14} aria-hidden="true" />
-                <span>Full image</span>
-              </button>
-            )}
+            <button
+              className={`button button--quiet chat-header__logs${logsOpen ? ' is-active' : ''}`}
+              type="button"
+              onClick={() => setLogsOpen((current) => !current)}
+              aria-expanded={logsOpen}
+              aria-controls="debug-panel"
+              aria-label={logsOpen ? 'Close debug logs' : 'Open debug logs'}
+            >
+              <Terminal size={14} aria-hidden="true" />
+              <span aria-hidden="true">Logs</span>
+              {logs.length > 0 && <span className="chat-header__logs-count">{logs.length}</span>}
+            </button>
             <button
               className="button button--quiet chat-header__new"
               type="button"
@@ -328,6 +349,34 @@ export default function Chat({
             </button>
           </div>
         </header>
+
+        {(sceneImageUrl || sceneImageStatus === 'error') && (
+          <div className="scene-controls">
+            {sceneImageUrl && (
+              <button
+                className="scene-controls__button"
+                type="button"
+                onClick={() => setSceneViewerOpen(true)}
+                aria-label="View full scene image"
+                title="View full scene image"
+              >
+                <Maximize2 size={19} aria-hidden="true" />
+              </button>
+            )}
+            {sceneImageStatus === 'error' && (
+              <button
+                className="scene-controls__retry"
+                type="button"
+                onClick={() => setSceneImageRefreshKey((current) => current + 1)}
+                aria-label="Regenerate scene image"
+                title="Regenerate scene image"
+              >
+                <RefreshCw size={14} aria-hidden="true" />
+                <span>Retry</span>
+              </button>
+            )}
+          </div>
+        )}
 
         <div
           className="chat-scroll"
@@ -387,19 +436,6 @@ export default function Chat({
                   <Users size={12} aria-hidden="true" />
                   {characters.length} {characters.length === 1 ? 'character' : 'characters'} listening
                 </span>
-                <button
-                  className={`debug-toggle${logsOpen ? ' is-active' : ''}`}
-                  type="button"
-                  onClick={() => setLogsOpen((current) => !current)}
-                  aria-expanded={logsOpen}
-                  aria-controls="debug-panel"
-                  aria-label={logsOpen ? 'Close debug logs' : 'Open debug logs'}
-                  title="Toggle debug logs"
-                >
-                  <Terminal size={12} aria-hidden="true" />
-                  <span>Logs</span>
-                  {logs.length > 0 && <span className="debug-toggle__count">{logs.length}</span>}
-                </button>
               </div>
             </div>
 
@@ -439,6 +475,9 @@ export default function Chat({
       <DebugLogs
         open={logsOpen}
         logs={logs}
+        session={session}
+        scenePromptBusy={scenePromptBusy}
+        sceneImageStatus={sceneImageStatus}
         onClose={() => setLogsOpen(false)}
         onClear={onClearLogs}
       />

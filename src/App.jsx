@@ -5,6 +5,7 @@ import Chat from './components/Chat.jsx';
 import { createScenePrompt, createStory, continueStory } from './lib/api.js';
 import {
   clearSession,
+  identityLocksFor,
   loadSession,
   makeId,
   makeSession,
@@ -109,6 +110,13 @@ export default function App() {
     try {
       const result = await createScenePrompt({ story, characters, messages }, { signal });
       const visualPrompt = result.visualPrompt?.trim() || fallbackPrompt || '';
+      const presentCharacterIds = Array.isArray(result.presentCharacterIds)
+        ? result.presentCharacterIds
+        : characters.map((character) => character.id);
+      const identityLocks =
+        typeof result.identityLocks === 'string' && result.identityLocks.trim()
+          ? result.identityLocks
+          : identityLocksFor(characters, presentCharacterIds);
       addLog({
         scope: 'scene-prompt',
         level: result.visualPrompt?.trim() ? 'success' : 'warn',
@@ -117,10 +125,12 @@ export default function App() {
         details: {
           durationMs: Math.round(performance.now() - started),
           response: result,
-          selectedPrompt: visualPrompt
+          selectedPrompt: visualPrompt,
+          presentCharacterIds,
+          identityLocks
         }
       });
-      return visualPrompt;
+      return { visualPrompt, identityLocks, presentCharacterIds };
     } catch (error) {
       if (error?.name === 'AbortError') {
         addLog({
@@ -133,6 +143,7 @@ export default function App() {
         throw error;
       }
 
+      const fallbackLocks = identityLocksFor(characters);
       addLog({
         scope: 'scene-prompt',
         level: fallbackPrompt ? 'warn' : 'error',
@@ -141,10 +152,17 @@ export default function App() {
         details: {
           durationMs: Math.round(performance.now() - started),
           error: errorDetails(error),
-          fallbackPrompt: fallbackPrompt || ''
+          fallbackPrompt: fallbackPrompt || '',
+          identityLocks: fallbackLocks
         }
       });
-      if (fallbackPrompt) return fallbackPrompt;
+      if (fallbackPrompt) {
+        return {
+          visualPrompt: fallbackPrompt,
+          identityLocks: fallbackLocks,
+          presentCharacterIds: characters.map((character) => character.id)
+        };
+      }
       throw error;
     }
   };
@@ -163,7 +181,7 @@ export default function App() {
     setScenePromptBusy(true);
 
     try {
-      const visualPrompt = await planScenePrompt({
+      const plan = await planScenePrompt({
         story,
         characters,
         messages,
@@ -171,14 +189,16 @@ export default function App() {
         turn,
         signal: controller.signal
       });
-      if (controller.signal.aborted || !visualPrompt) return;
+      if (controller.signal.aborted || !plan.visualPrompt) return;
 
       setSession((current) => {
         if (!current || current.id !== sessionId) return current;
         return {
           ...current,
-          story: { ...current.story, visualPrompt },
-          sceneImagePrompt: visualPrompt,
+          story: { ...current.story, visualPrompt: plan.visualPrompt },
+          sceneImagePrompt: plan.visualPrompt,
+          sceneIdentityLocks: plan.identityLocks,
+          scenePresentCharacterIds: plan.presentCharacterIds,
           updatedAt: Date.now()
         };
       });
@@ -187,7 +207,11 @@ export default function App() {
         level: 'info',
         turn,
         message: 'Prompt applied to the scene backdrop',
-        details: { visualPrompt }
+        details: {
+          visualPrompt: plan.visualPrompt,
+          identityLocks: plan.identityLocks,
+          presentCharacterIds: plan.presentCharacterIds
+        }
       });
     } catch {
       // The failed request is already represented in the log.
@@ -237,12 +261,16 @@ export default function App() {
       });
 
       const nextSession = makeSession(result.story, result.characters);
-      let visualPrompt = result.story.visualPrompt || '';
+      let plan = {
+        visualPrompt: result.story.visualPrompt || '',
+        identityLocks: identityLocksFor(nextSession.characters),
+        presentCharacterIds: nextSession.characters.map((character) => character.id)
+      };
 
       try {
-        visualPrompt = await planScenePrompt({
-          story: result.story,
-          characters: result.characters,
+        plan = await planScenePrompt({
+          story: nextSession.story,
+          characters: nextSession.characters,
           messages: nextSession.messages,
           fallbackPrompt: result.story.visualPrompt,
           turn: 0,
@@ -250,12 +278,18 @@ export default function App() {
         });
       } catch (error) {
         if (controller.signal.aborted) return;
-        visualPrompt = result.story.visualPrompt || '';
+        plan = {
+          visualPrompt: result.story.visualPrompt || '',
+          identityLocks: identityLocksFor(nextSession.characters),
+          presentCharacterIds: nextSession.characters.map((character) => character.id)
+        };
       }
 
       if (controller.signal.aborted) return;
-      nextSession.sceneImagePrompt = visualPrompt;
-      nextSession.story = { ...nextSession.story, visualPrompt };
+      nextSession.sceneImagePrompt = plan.visualPrompt;
+      nextSession.sceneIdentityLocks = plan.identityLocks;
+      nextSession.scenePresentCharacterIds = plan.presentCharacterIds;
+      nextSession.story = { ...nextSession.story, visualPrompt: plan.visualPrompt };
       setSession(nextSession);
       setDraft('');
       setView('chat');
@@ -326,22 +360,35 @@ export default function App() {
           createdAt: Date.now()
         });
       }
+      const emotionByCharacter = new Map();
       for (const reply of result.messages || []) {
         if (!reply?.text?.trim()) continue;
+        const previousCharacter = snapshot.characters.find(
+          (character) => character.id === reply.characterId
+        );
+        const emotion = reply.emotion?.trim() || previousCharacter?.emotion || 'guarded';
+        emotionByCharacter.set(reply.characterId, emotion);
         additions.push({
           id: makeId(),
           type: 'character',
           characterId: reply.characterId,
+          emotion,
           text: reply.text.trim(),
           createdAt: Date.now()
         });
       }
 
+      const nextCharacters = snapshot.characters.map((character) =>
+        emotionByCharacter.has(character.id)
+          ? { ...character, emotion: emotionByCharacter.get(character.id) }
+          : character
+      );
       const nextMessages = [...snapshot.messages, ...additions];
       setSession((current) => {
         if (!current || current.id !== snapshot.id) return current;
         return {
           ...current,
+          characters: nextCharacters,
           messages: nextMessages,
           updatedAt: Date.now()
         };
@@ -356,13 +403,14 @@ export default function App() {
           durationMs: Math.round(performance.now() - started),
           response: result,
           visualHint: result.visualPrompt || '',
+          nextCharacters,
           nextMessages
         }
       });
 
       requestScenePromptAfterTurn({
         story: snapshot.story,
-        characters: snapshot.characters,
+        characters: nextCharacters,
         messages: nextMessages,
         fallbackPrompt: result.visualPrompt,
         turn,

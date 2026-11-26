@@ -81,21 +81,35 @@ retry button can be used. `server.mjs` is only the local/VPS server and is not u
 
 ## What it does
 
-- **Blueprint to cast:** one structured Venice call produces the title, setting, premise, user role,
-  opening narration, an illustration prompt, and the minimum cast the story needs — from one to
-  three characters. A solitary premise gets one character; extra characters are only added when the
-  story itself calls for them.
+- **Blueprint to cast:** one structured Venice call produces the title, setting, premise, player
+  identity, opening narration, an illustration prompt, and the minimum cast the story needs — from
+  one to three NPCs. A solitary premise gets one character; extra characters are only added when the
+  story itself calls for them. The player is never generated as a separate NPC, even in a
+  multi-person opening. If the blueprint does not specify the player, they default to a 22-year-old
+  man; an explicitly stated age or gender is preserved.
+- **Consistent characters:** every NPC gets an immutable identity card — face shape, skin tone,
+  eyes, hair, build, height, age, and a distinctive feature. That identity is repeated verbatim in
+  every image prompt. Outfits, poses, emotion, and environment change with the scene, but physical
+  identity does not.
+- **Emotional state:** every NPC carries a current, realistic emotion with a subtle visible cue.
+  Emotions update after each reply, appear in the cast and message UI, and drive physical
+  expression in the generated scene image. The image prompt asks for understated, photorealistic
+  microexpressions.
 - **A focused visual director:** after the opening and after every character reply, a dedicated
-  Venice call reads the latest beat, the cast's appearances, and the previous image prompt, then
-  writes a specific 9:16 image prompt about what just happened — not a generic establishing shot.
-  The Modal **Z-Image-Turbo** endpoint renders it as a photorealistic vertical film still, the
-  server caches the PNG, and the chat crossfades it into the background. **Full image** opens the
-  current image alone, full-screen, with all chat text hidden.
+  Venice call reads the latest beat, the cast's current emotion and outfits, and the previous image
+  prompt, then writes a specific 9:16 image prompt about what just happened — not a generic
+  establishing shot. The server adds the present NPCs' immutable identity locks, and the Modal
+  **Z-Image-Turbo** endpoint renders a photorealistic vertical film still. The PNG is cached and
+  crossfaded into the background. The **image control on the middle-right edge** opens the current
+  image alone, full-screen, with all chat text hidden; if generation fails, a **Retry** control
+  appears in the same thumb-friendly position.
 - **Structured output:** Venice's JSON Schema response format is used for story creation, scene
   replies, and image prompting, with automatic retries for truncated or malformed responses.
-- **Live debug log:** a **Logs** button in the composer opens a drawer showing each turn's request
-  payload, model response, selected image prompt, final styled image prompt, dimensions, timings,
-  cache status, and errors. Copy a single entry or export the whole log as JSON.
+- **Live debug snapshot:** a **Logs** button in the top bar opens a consolidated, variable-first
+  drawer instead of an event feed. It shows the turn, latest action/reply, text model and timings,
+  player role and identity, full cast state (emotion, outfit, immutable identity), image status,
+  scene prompt, identity locks, final styled prompt, dimensions, model, cache, timings, errors, and
+  a raw JSON snapshot. Copy the snapshot or clear the event history.
 - **Generation status:** a floating status pill shows when the image prompt is being written or the
   scene is being painted/repainted in the background.
 - **Group scene:** every character is present and can speak. On each user turn the director picks
@@ -138,9 +152,10 @@ src/styles.css                 visual system and responsive layout
 - `POST /api/story/reply` — body `{ story, characters, messages }`; returns
   `{ narration, visualPrompt, messages }`.
 - `POST /api/scene-prompt` — body `{ story, characters, messages }`; returns
-  `{ visualPrompt, meta }` from the dedicated visual director.
-- `POST /api/scene-image` — body `{ prompt }`; returns a 720×1280 PNG from Z-Image-Turbo, plus
-  debug headers with the final styled prompt, dimensions, cache status, and timing.
+  `{ visualPrompt, presentCharacterIds, identityLocks, meta }` from the visual director.
+- `POST /api/scene-image` — body `{ prompt, identityLocks }`; returns a 720×1280 PNG from
+  Z-Image-Turbo, plus debug headers with the final styled prompt, dimensions, cache status, and
+  timing.
 
 Messages have `type` values of `narration`, `character`, or `user`. Character messages carry a
 `characterId` from the cast.
