@@ -81,6 +81,9 @@ export default function DebugLogs({
     const promptLog = latestLog(logs, 'scene-prompt', 'Scene image prompt ready');
     const appliedLog = latestLog(logs, 'scene-prompt', 'Prompt applied to the scene backdrop');
     const imageLog = latestLog(logs, 'image', 'Scene image received');
+    const imageStartLog = [...logs]
+      .reverse()
+      .find((entry) => entry.scope === 'image' && entry.details?.requestedModel);
     const lastImageError = latestError(logs, 'image');
     const imageError =
       lastImageError && (!imageLog || lastImageError.at > imageLog.at) ? lastImageError : null;
@@ -143,6 +146,7 @@ export default function DebugLogs({
         phase: imagePhase,
         finalStyledPrompt: imageDetails.finalPrompt || '',
         model: imageDetails.model || null,
+        requestedModel: imageDetails.requestedModel || imageStartLog?.details?.requestedModel || null,
         width: imageDetails.width || null,
         height: imageDetails.height || null,
         steps: imageDetails.steps || null,
@@ -303,7 +307,7 @@ export default function DebugLogs({
           <h3>Image pipeline</h3>
           <div className="debug-grid">
             <Field label="Status" value={image.phase} />
-            <Field label="Image model" value={image.model} />
+            <Field label="Image model" value={image.model || image.requestedModel} />
             <Field label="Dimensions" value={image.width && image.height ? `${image.width}×${image.height}` : '—'} />
             <Field label="Steps" value={image.steps} />
             <Field label="Cache" value={image.cache} />

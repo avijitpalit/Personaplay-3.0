@@ -9,6 +9,7 @@ import {
   Menu,
   RefreshCw,
   RotateCcw,
+  Settings,
   ShieldCheck,
   Sparkles,
   Terminal,
@@ -207,7 +208,9 @@ export default function Chat({
   onDismissError,
   logs = [],
   onClearLogs,
-  onLog
+  onLog,
+  imageModel,
+  onOpenSettings
 }) {
   const { story, characters, messages } = session;
   const [draft, setDraft] = useState('');
@@ -291,6 +294,7 @@ export default function Chat({
           prompt={sceneImagePrompt}
           identityLocks={session.sceneIdentityLocks || ''}
           settingContext={sceneSettingContext}
+          imageModel={imageModel}
           refreshKey={sceneImageRefreshKey}
           turn={sceneTurn}
           onActiveImage={setSceneImageUrl}
@@ -349,6 +353,15 @@ export default function Chat({
               <Terminal size={14} aria-hidden="true" />
               <span aria-hidden="true">Logs</span>
               {logs.length > 0 && <span className="chat-header__logs-count">{logs.length}</span>}
+            </button>
+            <button
+              className="button button--quiet chat-header__settings"
+              type="button"
+              onClick={onOpenSettings}
+              aria-label="Open settings"
+            >
+              <Settings size={14} aria-hidden="true" />
+              <span aria-hidden="true">Settings</span>
             </button>
             <button
               className="button button--quiet chat-header__new"

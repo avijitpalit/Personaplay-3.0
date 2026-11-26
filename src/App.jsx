@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Landing from './components/Landing.jsx';
 import Generating from './components/Generating.jsx';
 import Chat from './components/Chat.jsx';
+import SettingsPanel from './components/SettingsPanel.jsx';
 import { createScenePrompt, createStory, continueStory } from './lib/api.js';
+import { loadImageModel, saveImageModel } from './lib/imageModels.js';
 import {
   clearSession,
   identityLocksFor,
@@ -33,6 +35,8 @@ export default function App() {
   const [chatError, setChatError] = useState('');
   const [isReplying, setIsReplying] = useState(false);
   const [scenePromptBusy, setScenePromptBusy] = useState(false);
+  const [imageModel, setImageModel] = useState(loadImageModel);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [logs, setLogs] = useState(() => [
     {
       id: makeId(),
@@ -227,6 +231,7 @@ export default function App() {
     const prompt = draft.trim();
     if (prompt.length < 12) return;
 
+    setSettingsOpen(false);
     setCreateError('');
     setLogs([]);
     setView('creating');
@@ -476,10 +481,31 @@ export default function App() {
     setLogs([]);
     setSession(null);
     setDraft('');
+    setSettingsOpen(false);
     clearSession();
     setView('home');
     window.scrollTo({ top: 0, behavior: 'auto' });
   };
+
+  const handleImageModelChange = (nextModel) => {
+    setImageModel(nextModel);
+    saveImageModel(nextModel);
+    addLog({
+      scope: 'settings',
+      level: 'info',
+      message: 'Image generation model changed',
+      details: { imageModel: nextModel }
+    });
+  };
+
+  const settingsPanel = (
+    <SettingsPanel
+      open={settingsOpen}
+      imageModel={imageModel}
+      onImageModelChange={handleImageModelChange}
+      onClose={() => setSettingsOpen(false)}
+    />
+  );
 
   if (view === 'creating') {
     return <Generating blueprint={draft} onCancel={handleCancelCreate} />;
@@ -487,29 +513,38 @@ export default function App() {
 
   if (view === 'chat' && session) {
     return (
-      <Chat
-        session={session}
-        onSend={handleSend}
-        onNewStory={handleNewStory}
-        isReplying={isReplying}
-        scenePromptBusy={scenePromptBusy}
-        error={chatError}
-        onRetry={handleRetry}
-        onDismissError={() => setChatError('')}
-        logs={logs}
-        onClearLogs={() => setLogs([])}
-        onLog={addLog}
-      />
+      <>
+        <Chat
+          session={session}
+          onSend={handleSend}
+          onNewStory={handleNewStory}
+          isReplying={isReplying}
+          scenePromptBusy={scenePromptBusy}
+          error={chatError}
+          onRetry={handleRetry}
+          onDismissError={() => setChatError('')}
+          logs={logs}
+          onClearLogs={() => setLogs([])}
+          onLog={addLog}
+          imageModel={imageModel}
+          onOpenSettings={() => setSettingsOpen(true)}
+        />
+        {settingsPanel}
+      </>
     );
   }
 
   return (
-    <Landing
-      draft={draft}
-      onDraftChange={setDraft}
-      onSubmit={handleCreate}
-      error={createError}
-      autoFocus={false}
-    />
+    <>
+      <Landing
+        draft={draft}
+        onDraftChange={setDraft}
+        onSubmit={handleCreate}
+        error={createError}
+        autoFocus={false}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
+      {settingsPanel}
+    </>
   );
 }

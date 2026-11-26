@@ -14,6 +14,7 @@ export default function SceneBackdrop({
   prompt,
   identityLocks = '',
   settingContext = '',
+  imageModel = 'modal-z-image-turbo',
   refreshKey = 0,
   turn,
   onActiveImage,
@@ -58,7 +59,9 @@ export default function SceneBackdrop({
         attempt: refreshKey + 1,
         requestPrompt: prompt,
         identityLocks,
-        settingContext
+        settingContext,
+        imageModel,
+        requestedModel: imageModel
       }
     });
 
@@ -67,7 +70,7 @@ export default function SceneBackdrop({
         const response = await fetch('/api/scene-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt, identityLocks, settingContext }),
+          body: JSON.stringify({ prompt, identityLocks, settingContext, imageModel }),
           signal: controller.signal
         });
 
@@ -98,6 +101,7 @@ export default function SceneBackdrop({
           requestPrompt: prompt,
           identityLocks,
           settingContext,
+          requestedModel: imageModel,
           durationMs: Math.round(performance.now() - started)
         };
 
@@ -176,7 +180,8 @@ export default function SceneBackdrop({
             durationMs: Math.round(performance.now() - started),
             error: { name: error?.name, message: error?.message },
             requestPrompt: prompt,
-            settingContext
+            settingContext,
+            requestedModel: imageModel
           }
         });
       }
@@ -186,7 +191,7 @@ export default function SceneBackdrop({
       cancelled = true;
       controller.abort();
     };
-  }, [prompt, identityLocks, settingContext, refreshKey]);
+  }, [prompt, identityLocks, settingContext, imageModel, refreshKey]);
 
   useEffect(() => () => {
     for (const timer of timersRef.current) window.clearTimeout(timer);

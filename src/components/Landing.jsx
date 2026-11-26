@@ -4,6 +4,7 @@ import {
   ArrowUpRight,
   BookOpen,
   Feather,
+  Settings,
   ShieldCheck,
   Sparkles,
   Users
@@ -35,7 +36,7 @@ const PREVIEW_CAST = [
   { name: 'Ivo Sayer', accent: 'tide' }
 ];
 
-export default function Landing({ draft, onDraftChange, onSubmit, error, autoFocus = false }) {
+export default function Landing({ draft, onDraftChange, onSubmit, error, autoFocus = false, onOpenSettings }) {
   const textareaRef = useRef(null);
   const canSubmit = draft.trim().length >= 12;
 
@@ -69,6 +70,17 @@ export default function Landing({ draft, onDraftChange, onSubmit, error, autoFoc
             Casting live worlds
           </span>
           <span className="engine-chip">Venice AI</span>
+          {onOpenSettings && (
+            <button
+              className="button button--quiet home__settings"
+              type="button"
+              onClick={onOpenSettings}
+              aria-label="Open settings"
+            >
+              <Settings size={14} aria-hidden="true" />
+              <span aria-hidden="true">Settings</span>
+            </button>
+          )}
         </div>
       </header>
 

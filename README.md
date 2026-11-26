@@ -35,6 +35,9 @@ SCENE_IMAGE_URL=https://avijitpalit3--z-image-turbo-zimageservice-fastapi-app.mo
 SCENE_IMAGE_WIDTH=720
 SCENE_IMAGE_HEIGHT=1280
 SCENE_IMAGE_STEPS=9
+RUNPOD_API_KEY=your_runpod_api_key
+RUNPOD_ZIMAGE_ENDPOINT=https://api.runpod.ai/v2/z-image-turbo
+RUNPOD_TIMEOUT_MS=48000
 ```
 
 `VENICE_MODEL` accepts any Venice chat model. The default is the model from the supplied example,
@@ -73,6 +76,9 @@ SCENE_IMAGE_URL=https://avijitpalit3--z-image-turbo-zimageservice-fastapi-app.mo
 SCENE_IMAGE_WIDTH=720
 SCENE_IMAGE_HEIGHT=1280
 SCENE_IMAGE_STEPS=9
+RUNPOD_API_KEY=your_runpod_api_key
+RUNPOD_ZIMAGE_ENDPOINT=https://api.runpod.ai/v2/z-image-turbo
+RUNPOD_TIMEOUT_MS=48000
 ```
 
 `vercel.json` raises the function limit to 60 seconds because photoreal scene generation can take
@@ -114,6 +120,10 @@ retry button can be used. `server.mjs` is only the local/VPS server and is not u
   control appears in the same position.
 - **Structured output:** Venice's JSON Schema response format is used for story creation, scene
   replies, and image prompting, with automatic retries for truncated or malformed responses.
+- **Image model picker:** a **Settings** panel is available from the landing page and from the
+  chat header (beside **Logs**). It contains a saved dropdown choosing between the Modal and RunPod
+  Z-Image-Turbo endpoints. Changing the model repaints the current scene with the same prompt and
+  identity locks.
 - **Live debug snapshot:** a **Logs** button in the top bar opens a consolidated, variable-first
   drawer instead of an event feed. It shows the turn, latest action/reply, text model and timings,
   player role and identity, full cast state (emotion, outfit, immutable identity), image status,
@@ -134,6 +144,14 @@ retry button can be used. `server.mjs` is only the local/VPS server and is not u
 - **Responsive and accessible:** mobile layout, keyboard focus states, native confirmation dialog,
   reduced-motion support, semantic labels, and `aria-live` feedback.
 
+### Image providers
+
+The default Modal endpoint is configured with `SCENE_IMAGE_URL`. The optional RunPod endpoint uses
+`RUNPOD_API_KEY` and `RUNPOD_ZIMAGE_ENDPOINT` (default `https://api.runpod.ai/v2/z-image-turbo`).
+RunPod is queued, so it polls the job status and can take longer; `RUNPOD_TIMEOUT_MS` caps the
+server-side wait (default `48000`). Select it from **Settings**; the choice is stored in the browser
+and applies to the opening image and every subsequent repaint.
+
 ## Project structure
 
 ```text
@@ -149,6 +167,8 @@ src/components/Chat.jsx        cast panel, transcript, composer
 src/components/SceneBackdrop.jsx crossfading generated scene art
 src/components/SceneViewer.jsx full-screen, text-free image view
 src/components/DebugLogs.jsx   per-turn parameter and timing drawer
+src/components/SettingsPanel.jsx image model settings
+src/lib/imageModels.js         image model options and saved preference
 src/lib/api.js                 browser-side API wrapper
 src/lib/session.js             session shape and storage
 src/styles.css                 visual system and responsive layout
@@ -162,9 +182,10 @@ src/styles.css                 visual system and responsive layout
   `{ narration, visualPrompt, messages }`.
 - `POST /api/scene-prompt` — body `{ story, characters, messages }`; returns
   `{ visualPrompt, presentCharacterIds, identityLocks, meta }` from the visual director.
-- `POST /api/scene-image` — body `{ prompt, identityLocks, settingContext }`; returns a 720×1280
-  PNG from Z-Image-Turbo, plus debug headers with the final styled prompt, dimensions, cache status,
-  and timing. `settingContext` carries the story's country/region and era into the final prompt.
+- `POST /api/scene-image` — body `{ prompt, identityLocks, settingContext, imageModel }`; returns a
+  720×1280 PNG from Z-Image-Turbo (Modal or RunPod), plus debug headers with the final styled prompt,
+  dimensions, cache status, model, and timing. `settingContext` carries the story's country/region
+  and era into the final prompt.
 
 Messages have `type` values of `narration`, `character`, or `user`. Character messages carry a
 `characterId` from the cast.
