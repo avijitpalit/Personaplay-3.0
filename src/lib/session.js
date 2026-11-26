@@ -4,6 +4,8 @@ export const DEFAULT_PROTAGONIST = {
   age: '22',
   gender: 'man',
   pronouns: 'he/him',
+  nationality: '',
+  ethnicity: '',
   appearance: 'A 22-year-old man with a quiet, watchful presence and a lean build.'
 };
 
@@ -26,13 +28,22 @@ export function normalizeStory(story) {
   const protagonist = story?.protagonist || {};
   return {
     ...story,
+    country: story?.country || '',
     protagonist: {
       age: String(protagonist.age || DEFAULT_PROTAGONIST.age),
       gender: protagonist.gender || DEFAULT_PROTAGONIST.gender,
       pronouns: protagonist.pronouns || DEFAULT_PROTAGONIST.pronouns,
+      nationality: protagonist.nationality || DEFAULT_PROTAGONIST.nationality,
+      ethnicity: protagonist.ethnicity || DEFAULT_PROTAGONIST.ethnicity,
       appearance: protagonist.appearance || DEFAULT_PROTAGONIST.appearance
     }
   };
+}
+
+export function settingContextFor(story) {
+  return [story?.country, story?.era]
+    .filter((part) => typeof part === 'string' && part.trim())
+    .join(' · ');
 }
 
 export function normalizeCharacter(character) {
@@ -42,7 +53,9 @@ export function normalizeCharacter(character) {
       character.appearance ||
       'They have a distinct, consistent face and build that should not change between images.',
     outfit: character.outfit || 'Practical clothing suited to the scene.',
-    emotion: character.emotion || 'guarded'
+    emotion: character.emotion || 'guarded',
+    nationality: character.nationality || '',
+    ethnicity: character.ethnicity || ''
   };
 }
 
@@ -54,10 +67,10 @@ export function identityLocksFor(characters, presentCharacterIds) {
 
   return characters
     .filter((character) => visible.has(character.id))
-    .map(
-      (character) =>
-        `${character.name} — ${character.age}, ${character.pronouns}. Immutable physical identity: ${character.appearance}`
-    )
+    .map((character) => {
+      const background = [...new Set([character.nationality, character.ethnicity].filter(Boolean))].join(', ');
+      return `${character.name} — ${character.age}, ${character.pronouns}${background ? `, ${background}` : ''}. Immutable physical identity: ${character.appearance}`;
+    })
     .join('\n');
 }
 

@@ -3,8 +3,9 @@ import {
   AlertCircle,
   ArrowUp,
   BookOpen,
+  Eye,
+  EyeOff,
   LoaderCircle,
-  Maximize2,
   Menu,
   RefreshCw,
   RotateCcw,
@@ -21,7 +22,7 @@ import ConfirmDialog from './ConfirmDialog.jsx';
 import SceneBackdrop from './SceneBackdrop.jsx';
 import SceneViewer from './SceneViewer.jsx';
 import DebugLogs from './DebugLogs.jsx';
-import { scenePromptForStory } from '../lib/session.js';
+import { settingContextFor, scenePromptForStory } from '../lib/session.js';
 
 function CastPanel({ session, onNewStory, onClose, isOpen }) {
   const { story, characters } = session;
@@ -43,6 +44,12 @@ function CastPanel({ session, onNewStory, onClose, isOpen }) {
         <h1>{story.title}</h1>
         <p className="story-identity__tagline">{story.tagline}</p>
         <div className="story-facts">
+          {story.country && (
+            <>
+              <span>{story.country}</span>
+              <span aria-hidden="true">·</span>
+            </>
+          )}
           <span>{story.era}</span>
           <span aria-hidden="true">·</span>
           <span>{story.mood}</span>
@@ -68,7 +75,7 @@ function CastPanel({ session, onNewStory, onClose, isOpen }) {
                 {character.name}
                 {character.age && !/^unknown$/i.test(character.age) ? <span>{character.age}</span> : null}
               </div>
-              <p>{character.role}</p>
+              <p>{[character.nationality, character.role].filter(Boolean).join(' · ')}</p>
               {character.emotion && (
                 <span className="cast-card__emotion">
                   <span aria-hidden="true" />
@@ -92,6 +99,9 @@ function CastPanel({ session, onNewStory, onClose, isOpen }) {
             <span>{story.protagonist.age}</span>
             <span>{story.protagonist.gender}</span>
             <span>{story.protagonist.pronouns}</span>
+            {[...new Set([story.protagonist.nationality, story.protagonist.ethnicity].filter(Boolean))].map((tag) => (
+              <span key={tag}>{tag}</span>
+            ))}
           </div>
         )}
       </div>
@@ -213,6 +223,7 @@ export default function Chat({
   const textareaRef = useRef(null);
   const characterMap = new Map(characters.map((character) => [character.id, character]));
   const sceneImagePrompt = session.sceneImagePrompt || scenePromptForStory(story);
+  const sceneSettingContext = settingContextFor(story);
   const sceneTurn = messages.filter((message) => message.type === 'user').length;
 
   useEffect(() => {
@@ -279,6 +290,7 @@ export default function Chat({
         <SceneBackdrop
           prompt={sceneImagePrompt}
           identityLocks={session.sceneIdentityLocks || ''}
+          settingContext={sceneSettingContext}
           refreshKey={sceneImageRefreshKey}
           turn={sceneTurn}
           onActiveImage={setSceneImageUrl}
@@ -349,34 +361,6 @@ export default function Chat({
             </button>
           </div>
         </header>
-
-        {(sceneImageUrl || sceneImageStatus === 'error') && (
-          <div className="scene-controls">
-            {sceneImageUrl && (
-              <button
-                className="scene-controls__button"
-                type="button"
-                onClick={() => setSceneViewerOpen(true)}
-                aria-label="View full scene image"
-                title="View full scene image"
-              >
-                <Maximize2 size={19} aria-hidden="true" />
-              </button>
-            )}
-            {sceneImageStatus === 'error' && (
-              <button
-                className="scene-controls__retry"
-                type="button"
-                onClick={() => setSceneImageRefreshKey((current) => current + 1)}
-                aria-label="Regenerate scene image"
-                title="Regenerate scene image"
-              >
-                <RefreshCw size={14} aria-hidden="true" />
-                <span>Retry</span>
-              </button>
-            )}
-          </div>
-        )}
 
         <div
           className="chat-scroll"
@@ -471,6 +455,35 @@ export default function Chat({
           </div>
         </div>
       </main>
+
+      {(sceneImageUrl || sceneImageStatus === 'error') && (
+        <div className="scene-controls">
+          {sceneImageUrl && (
+            <button
+              className={`scene-controls__button${sceneViewerOpen ? ' is-active' : ''}`}
+              type="button"
+              onClick={() => setSceneViewerOpen((current) => !current)}
+              aria-label={sceneViewerOpen ? 'Hide the full scene image' : 'Show the full scene image'}
+              aria-pressed={sceneViewerOpen}
+              title={sceneViewerOpen ? 'Hide full image' : 'Show full image'}
+            >
+              {sceneViewerOpen ? <EyeOff size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}
+            </button>
+          )}
+          {sceneImageStatus === 'error' && (
+            <button
+              className="scene-controls__retry"
+              type="button"
+              onClick={() => setSceneImageRefreshKey((current) => current + 1)}
+              aria-label="Regenerate scene image"
+              title="Regenerate scene image"
+            >
+              <RefreshCw size={14} aria-hidden="true" />
+              <span>Retry</span>
+            </button>
+          )}
+        </div>
+      )}
 
       <DebugLogs
         open={logsOpen}

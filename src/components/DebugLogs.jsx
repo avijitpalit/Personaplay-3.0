@@ -149,6 +149,7 @@ export default function DebugLogs({
         cache: imageDetails.cache || null,
         imageId: imageDetails.imageId || null,
         requestPrompt: imageDetails.requestPrompt || scenePrompt,
+        settingContext: imageDetails.settingContext || '',
         clientDurationMs: imageDetails.durationMs || null,
         serverDurationMs: imageDetails.serverDurationMs || null,
         bytes: imageDetails.bytes || null,
@@ -256,6 +257,7 @@ export default function DebugLogs({
           <div className="debug-grid">
             <Field label="Title" value={story.title} />
             <Field label="Genre" value={story.genre} />
+            <Field label="Country / region" value={story.country} />
             <Field
               label="Text model"
               value={snapshot.storyGeneration?.response?.meta?.model || snapshot.replyGeneration?.response?.meta?.model}
@@ -266,6 +268,10 @@ export default function DebugLogs({
             <Field
               label="Protagonist"
               value={`${protagonist.age || '22'} · ${protagonist.gender || 'man'} · ${protagonist.pronouns || 'he/him'}`}
+            />
+            <Field
+              label="Player background"
+              value={[...new Set([protagonist.nationality, protagonist.ethnicity].filter(Boolean))].join(' · ')}
             />
             <Field label="Player appearance" value={protagonist.appearance} wide />
           </div>
@@ -282,6 +288,10 @@ export default function DebugLogs({
                   <em>{character.emotion || 'guarded'}</em>
                 </div>
                 <Field label="Age / pronouns" value={`${character.age} · ${character.pronouns}`} />
+                <Field
+                  label="Nationality / ethnicity"
+                  value={[...new Set([character.nationality, character.ethnicity].filter(Boolean))].join(' · ')}
+                />
                 <Field label="Outfit" value={character.outfit} />
                 <Field label="Immutable identity" value={character.appearance} />
               </article>
@@ -302,6 +312,7 @@ export default function DebugLogs({
             <Field label="Client image time" value={image.clientDurationMs ? `${image.clientDurationMs} ms` : '—'} />
             <Field label="Server image time" value={image.serverDurationMs ? `${image.serverDurationMs} ms` : '—'} />
             <Field label="Image bytes" value={image.bytes} />
+            <Field label="Setting context sent" value={image.settingContext} wide />
             <Field label="Visible NPC IDs" value={snapshot.scenePrompt.presentCharacterIds.join(', ')} wide />
           </div>
 

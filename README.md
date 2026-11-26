@@ -87,9 +87,17 @@ retry button can be used. `server.mjs` is only the local/VPS server and is not u
   story itself calls for them. The player is never generated as a separate NPC, even in a
   multi-person opening. If the blueprint does not specify the player, they default to a 22-year-old
   man; an explicitly stated age or gender is preserved.
+- **Roleplay format:** character replies keep spoken words outside parentheses and put every
+  physical action, gesture, and private thought inside parentheses. The UI renders those
+  parenthetical beats as italic, warm-toned action text without showing the brackets; quoted speech
+  stays in the normal voice. Dialogue follows the blueprint's language mix and register — Hinglish,
+  regional slang, and code-switching are preserved rather than translated. The scene honours the
+  blueprint's adult tone and dynamics without sanitising or moralising.
 - **Consistent characters:** every NPC gets an immutable identity card — face shape, skin tone,
-  eyes, hair, build, height, age, and a distinctive feature. That identity is repeated verbatim in
-  every image prompt. Outfits, poses, emotion, and environment change with the scene, but physical
+  nationality, ethnicity, eyes, hair, build, height, age, and a distinctive feature. That identity
+  is repeated verbatim in every image prompt. The story's country/region and each character's
+  nationality and ethnicity are inferred from the initial blueprint and carried into the image
+  prompt. Outfits, poses, emotion, and environment change with the scene, but physical and cultural
   identity does not.
 - **Emotional state:** every NPC carries a current, realistic emotion with a subtle visible cue.
   Emotions update after each reply, appear in the cast and message UI, and drive physical
@@ -100,9 +108,10 @@ retry button can be used. `server.mjs` is only the local/VPS server and is not u
   prompt, then writes a specific 9:16 image prompt about what just happened — not a generic
   establishing shot. The server adds the present NPCs' immutable identity locks, and the Modal
   **Z-Image-Turbo** endpoint renders a photorealistic vertical film still. The PNG is cached and
-  crossfaded into the background. The **image control on the middle-right edge** opens the current
-  image alone, full-screen, with all chat text hidden; if generation fails, a **Retry** control
-  appears in the same thumb-friendly position.
+  crossfaded into the background. A single thumb-friendly **Eye / Eye-off control on the
+  middle-right edge** toggles the full-screen image; it stays in the same place and changes icon
+  rather than handing off to a separate top-right close button. If generation fails, a **Retry**
+  control appears in the same position.
 - **Structured output:** Venice's JSON Schema response format is used for story creation, scene
   replies, and image prompting, with automatic retries for truncated or malformed responses.
 - **Live debug snapshot:** a **Logs** button in the top bar opens a consolidated, variable-first
@@ -117,8 +126,8 @@ retry button can be used. `server.mjs` is only the local/VPS server and is not u
 - **A real chat UI:** character avatars and roles, narration interludes, user bubbles, typing state,
   error + retry states, auto-scroll, and an auto-growing composer. Enter sends, Shift+Enter adds a
   newline.
-- **Story panel:** genre, tagline, era, mood, the full cast, and the user's role. It becomes an
-  off-canvas drawer on smaller screens.
+- **Story panel:** genre, tagline, era, mood, country, the full cast (with nationality), and the
+  user's role. It becomes an off-canvas drawer on smaller screens.
 - **Persistence:** the current story, transcript, and latest visual prompt are saved in
   `localStorage`. Refreshing restores the scene and the cached illustration. **New story** clears it
   after a confirmation dialog.
@@ -153,9 +162,9 @@ src/styles.css                 visual system and responsive layout
   `{ narration, visualPrompt, messages }`.
 - `POST /api/scene-prompt` — body `{ story, characters, messages }`; returns
   `{ visualPrompt, presentCharacterIds, identityLocks, meta }` from the visual director.
-- `POST /api/scene-image` — body `{ prompt, identityLocks }`; returns a 720×1280 PNG from
-  Z-Image-Turbo, plus debug headers with the final styled prompt, dimensions, cache status, and
-  timing.
+- `POST /api/scene-image` — body `{ prompt, identityLocks, settingContext }`; returns a 720×1280
+  PNG from Z-Image-Turbo, plus debug headers with the final styled prompt, dimensions, cache status,
+  and timing. `settingContext` carries the story's country/region and era into the final prompt.
 
 Messages have `type` values of `narration`, `character`, or `user`. Character messages carry a
 `characterId` from the cast.

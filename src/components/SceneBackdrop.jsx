@@ -13,6 +13,7 @@ function headerPrompt(response) {
 export default function SceneBackdrop({
   prompt,
   identityLocks = '',
+  settingContext = '',
   refreshKey = 0,
   turn,
   onActiveImage,
@@ -56,7 +57,8 @@ export default function SceneBackdrop({
         trigger,
         attempt: refreshKey + 1,
         requestPrompt: prompt,
-        identityLocks
+        identityLocks,
+        settingContext
       }
     });
 
@@ -65,7 +67,7 @@ export default function SceneBackdrop({
         const response = await fetch('/api/scene-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt, identityLocks }),
+          body: JSON.stringify({ prompt, identityLocks, settingContext }),
           signal: controller.signal
         });
 
@@ -94,6 +96,8 @@ export default function SceneBackdrop({
           serverDurationMs: Number(response.headers.get('x-scene-duration-ms')) || null,
           finalPrompt: headerPrompt(response),
           requestPrompt: prompt,
+          identityLocks,
+          settingContext,
           durationMs: Math.round(performance.now() - started)
         };
 
@@ -171,7 +175,8 @@ export default function SceneBackdrop({
           details: {
             durationMs: Math.round(performance.now() - started),
             error: { name: error?.name, message: error?.message },
-            requestPrompt: prompt
+            requestPrompt: prompt,
+            settingContext
           }
         });
       }
@@ -181,7 +186,7 @@ export default function SceneBackdrop({
       cancelled = true;
       controller.abort();
     };
-  }, [prompt, identityLocks, refreshKey]);
+  }, [prompt, identityLocks, settingContext, refreshKey]);
 
   useEffect(() => () => {
     for (const timer of timersRef.current) window.clearTimeout(timer);

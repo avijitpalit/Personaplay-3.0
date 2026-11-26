@@ -1,53 +1,36 @@
 import { useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
 
 export default function SceneViewer({ open, imageUrl, onClose }) {
-  const dialogRef = useRef(null);
-  const closeRef = useRef(null);
+  const closeRef = useRef(onClose);
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
+    closeRef.current = onClose;
+  }, [onClose]);
 
-    if (open && imageUrl) {
-      if (!dialog.open) dialog.showModal();
-      requestAnimationFrame(() => closeRef.current?.focus());
-    } else if (dialog.open) {
-      dialog.close();
-    }
-  }, [open, imageUrl]);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') closeRef.current?.();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open]);
+
+  if (!open || !imageUrl) return null;
 
   return (
-    <dialog
-      ref={dialogRef}
-      className="scene-viewer"
-      aria-label="Full scene illustration"
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-      onClose={onClose}
-    >
-      {imageUrl && (
-        <div
-          className="scene-viewer__backdrop"
-          style={{ backgroundImage: `url("${imageUrl}")` }}
-          onClick={onClose}
-          aria-hidden="true"
-        />
-      )}
-      {imageUrl && (
-        <img
-          className="scene-viewer__image"
-          src={imageUrl}
-          alt="Full-size photorealistic illustration of the current scene"
-          draggable={false}
-        />
-      )}
-      <button ref={closeRef} className="scene-viewer__close" type="button" onClick={onClose}>
-        <X size={17} aria-hidden="true" />
-        Back to story
-      </button>
-    </dialog>
+    <div className="scene-viewer" role="dialog" aria-label="Full scene image">
+      <div
+        className="scene-viewer__backdrop"
+        style={{ backgroundImage: `url("${imageUrl}")` }}
+        aria-hidden="true"
+      />
+      <img
+        className="scene-viewer__image"
+        src={imageUrl}
+        alt="Full-size photorealistic illustration of the current scene"
+        draggable={false}
+      />
+    </div>
   );
 }
