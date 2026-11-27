@@ -99,7 +99,15 @@ export default function App() {
     scenePromptAbortRef.current?.abort();
   }, []);
 
-  const planScenePrompt = async ({ story, characters, messages, fallbackPrompt, turn, signal }) => {
+  const planScenePrompt = async ({
+    story,
+    characters,
+    messages,
+    fallbackPrompt,
+    previousPrompt = '',
+    turn,
+    signal
+  }) => {
     const started = performance.now();
     addLog({
       scope: 'scene-prompt',
@@ -109,7 +117,8 @@ export default function App() {
       details: {
         endpoint: '/api/scene-prompt',
         request: { story, characters, messages },
-        fallbackPrompt: fallbackPrompt || ''
+        fallbackPrompt: fallbackPrompt || '',
+        previousPrompt: previousPrompt || ''
       }
     });
 
@@ -126,6 +135,9 @@ export default function App() {
         typeof result.identityLocks === 'string' && result.identityLocks.trim()
           ? result.identityLocks
           : identityLocksFor(characters, presentCharacterIds);
+      const sceneShift = result.sceneShift === 'new-location' ? 'new-location' : 'continue';
+      const environment =
+        sceneShift === 'new-location' ? '' : result.environment?.trim() || '';
       addLog({
         scope: 'scene-prompt',
         level: result.visualPrompt?.trim() ? 'success' : 'warn',
@@ -136,10 +148,13 @@ export default function App() {
           response: result,
           selectedPrompt: visualPrompt,
           presentCharacterIds,
-          identityLocks
+          identityLocks,
+          sceneShift,
+          environment,
+          previousPrompt: previousPrompt || ''
         }
       });
-      return { visualPrompt, identityLocks, presentCharacterIds };
+      return { visualPrompt, identityLocks, presentCharacterIds, sceneShift, environment };
     } catch (error) {
       if (error?.name === 'AbortError') {
         addLog({
@@ -169,7 +184,9 @@ export default function App() {
         return {
           visualPrompt: fallbackPrompt,
           identityLocks: fallbackLocks,
-          presentCharacterIds: characters.map((character) => character.id)
+          presentCharacterIds: characters.map((character) => character.id),
+          sceneShift: 'continue',
+          environment: ''
         };
       }
       throw error;
@@ -188,6 +205,8 @@ export default function App() {
     const controller = new AbortController();
     scenePromptAbortRef.current = controller;
     setScenePromptBusy(true);
+    // The frame currently on screen is the continuity reference for this turn.
+    const previousPrompt = story.visualPrompt?.trim() || '';
 
     try {
       const plan = await planScenePrompt({
@@ -195,6 +214,7 @@ export default function App() {
         characters,
         messages,
         fallbackPrompt,
+        previousPrompt,
         turn,
         signal: controller.signal
       });
@@ -208,6 +228,9 @@ export default function App() {
           sceneImagePrompt: plan.visualPrompt,
           sceneIdentityLocks: plan.identityLocks,
           scenePresentCharacterIds: plan.presentCharacterIds,
+          sceneEnvironment: plan.environment || '',
+          sceneShift: plan.sceneShift,
+          scenePreviousImagePrompt: previousPrompt,
           updatedAt: Date.now()
         };
       });
@@ -219,7 +242,10 @@ export default function App() {
         details: {
           visualPrompt: plan.visualPrompt,
           identityLocks: plan.identityLocks,
-          presentCharacterIds: plan.presentCharacterIds
+          presentCharacterIds: plan.presentCharacterIds,
+          sceneShift: plan.sceneShift,
+          environment: plan.environment || '',
+          previousPrompt
         }
       });
     } catch {
@@ -277,7 +303,9 @@ export default function App() {
       let plan = {
         visualPrompt: result.story.visualPrompt || '',
         identityLocks: identityLocksFor(nextSession.characters),
-        presentCharacterIds: nextSession.characters.map((character) => character.id)
+        presentCharacterIds: nextSession.characters.map((character) => character.id),
+        sceneShift: 'continue',
+        environment: ''
       };
 
       try {
@@ -286,6 +314,7 @@ export default function App() {
           characters: nextSession.characters,
           messages: nextSession.messages,
           fallbackPrompt: result.story.visualPrompt,
+          previousPrompt: '',
           turn: 0,
           signal: controller.signal
         });
@@ -294,7 +323,9 @@ export default function App() {
         plan = {
           visualPrompt: result.story.visualPrompt || '',
           identityLocks: identityLocksFor(nextSession.characters),
-          presentCharacterIds: nextSession.characters.map((character) => character.id)
+          presentCharacterIds: nextSession.characters.map((character) => character.id),
+          sceneShift: 'continue',
+          environment: ''
         };
       }
 
@@ -302,6 +333,9 @@ export default function App() {
       nextSession.sceneImagePrompt = plan.visualPrompt;
       nextSession.sceneIdentityLocks = plan.identityLocks;
       nextSession.scenePresentCharacterIds = plan.presentCharacterIds;
+      nextSession.sceneEnvironment = plan.environment || '';
+      nextSession.sceneShift = plan.sceneShift || 'continue';
+      nextSession.scenePreviousImagePrompt = '';
       nextSession.story = { ...nextSession.story, visualPrompt: plan.visualPrompt };
       setSession(nextSession);
       setDraft('');

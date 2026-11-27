@@ -116,10 +116,11 @@ export function normalizeCharacter(character) {
 }
 
 export function identityLocksFor(characters, presentCharacterIds) {
-  const visible =
-    Array.isArray(presentCharacterIds) && presentCharacterIds.length > 0
-      ? new Set(presentCharacterIds)
-      : new Set(characters.map((character) => character.id));
+  // An explicit array is authoritative, including an empty one. Only a
+  // missing value means "lock the whole cast" (opening scene / fallback).
+  const visible = Array.isArray(presentCharacterIds)
+    ? new Set(presentCharacterIds)
+    : new Set(characters.map((character) => character.id));
 
   return characters
     .filter((character) => visible.has(character.id))
@@ -165,6 +166,9 @@ export function makeSession(story, characters, initialStory = '') {
     sceneImagePrompt: scenePromptForStory(normalizedStory),
     sceneIdentityLocks: identityLocksFor(normalizedCharacters),
     scenePresentCharacterIds: normalizedCharacters.map((character) => character.id),
+    sceneEnvironment: '',
+    sceneShift: 'continue',
+    scenePreviousImagePrompt: '',
     createdAt: now,
     updatedAt: now
   };
@@ -213,7 +217,14 @@ export function loadSession() {
           : identityLocksFor(characters),
       scenePresentCharacterIds: Array.isArray(session.scenePresentCharacterIds)
         ? session.scenePresentCharacterIds
-        : characters.map((character) => character.id)
+        : characters.map((character) => character.id),
+      sceneEnvironment:
+        typeof session.sceneEnvironment === 'string' ? session.sceneEnvironment : '',
+      sceneShift: session.sceneShift === 'new-location' ? 'new-location' : 'continue',
+      scenePreviousImagePrompt:
+        typeof session.scenePreviousImagePrompt === 'string'
+          ? session.scenePreviousImagePrompt
+          : ''
     };
   } catch {
     return null;

@@ -325,6 +325,9 @@ export default function Chat({
           prompt={sceneImagePrompt}
           identityLocks={session.sceneIdentityLocks || ''}
           settingContext={sceneSettingContext}
+          environment={session.sceneEnvironment || ''}
+          sceneShift={session.sceneShift || 'continue'}
+          previousPrompt={session.scenePreviousImagePrompt || ''}
           imageModel={imageModel}
           refreshKey={sceneImageRefreshKey}
           turn={sceneTurn}

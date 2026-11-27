@@ -14,6 +14,9 @@ export default function SceneBackdrop({
   prompt,
   identityLocks = '',
   settingContext = '',
+  environment = '',
+  sceneShift = 'continue',
+  previousPrompt = '',
   imageModel = 'modal-z-image-turbo',
   refreshKey = 0,
   turn,
@@ -60,6 +63,9 @@ export default function SceneBackdrop({
         requestPrompt: prompt,
         identityLocks,
         settingContext,
+        environment,
+        sceneShift,
+        previousPrompt,
         imageModel,
         requestedModel: imageModel
       }
@@ -70,7 +76,15 @@ export default function SceneBackdrop({
         const response = await fetch('/api/scene-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt, identityLocks, settingContext, imageModel }),
+          body: JSON.stringify({
+            prompt,
+            identityLocks,
+            settingContext,
+            environment,
+            sceneShift,
+            previousPrompt,
+            imageModel
+          }),
           signal: controller.signal
         });
 
@@ -97,10 +111,13 @@ export default function SceneBackdrop({
           height: Number(response.headers.get('x-scene-height')) || null,
           steps: Number(response.headers.get('x-scene-steps')) || null,
           serverDurationMs: Number(response.headers.get('x-scene-duration-ms')) || null,
+          sceneShift: response.headers.get('x-scene-shift') || sceneShift,
           finalPrompt: headerPrompt(response),
           requestPrompt: prompt,
           identityLocks,
           settingContext,
+          environment,
+          previousPrompt,
           requestedModel: imageModel,
           durationMs: Math.round(performance.now() - started)
         };
@@ -191,7 +208,7 @@ export default function SceneBackdrop({
       cancelled = true;
       controller.abort();
     };
-  }, [prompt, identityLocks, settingContext, imageModel, refreshKey]);
+  }, [prompt, identityLocks, settingContext, environment, sceneShift, previousPrompt, imageModel, refreshKey]);
 
   useEffect(() => () => {
     for (const timer of timersRef.current) window.clearTimeout(timer);

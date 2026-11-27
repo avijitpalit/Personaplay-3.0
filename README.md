@@ -112,8 +112,14 @@ retry button can be used. `server.mjs` is only the local/VPS server and is not u
 - **A focused visual director:** after the opening and after every character reply, a dedicated
   Venice call reads the latest beat, the cast's current emotion and outfits, and the previous image
   prompt, then writes a specific 9:16 image prompt about what just happened — not a generic
-  establishing shot. The server adds the present NPCs' immutable identity locks, and the Modal
-  **Z-Image-Turbo** endpoint renders a photorealistic vertical film still. The PNG is cached and
+  establishing shot. It also returns a compact `environment` anchor and a `sceneShift` verdict:
+  `continue` keeps the previous location, architecture, light and palette while the camera angle
+  changes, and `new-location` rebuilds the background when the beat makes a hard move (going
+  outside, crossing into another building, travelling). A clear move in the player's latest action
+  forces `new-location` even if the director was cautious. The server adds the present NPCs'
+  immutable identity locks, an exact "people in frame" count that forbids duplicates, twins and
+  reflections, and the Modal **Z-Image-Turbo** endpoint renders a photorealistic vertical film
+  still. The PNG is cached and
   crossfaded into the background. A single thumb-friendly **Eye / Eye-off control on the
   middle-right edge** toggles the full-screen image; it stays in the same place and changes icon
   rather than handing off to a separate top-right close button. If generation fails, a **Retry**
@@ -181,11 +187,15 @@ src/styles.css                 visual system and responsive layout
 - `POST /api/story/reply` — body `{ story, characters, messages }`; returns
   `{ narration, visualPrompt, messages }`.
 - `POST /api/scene-prompt` — body `{ story, characters, messages }`; returns
-  `{ visualPrompt, presentCharacterIds, identityLocks, meta }` from the visual director.
-- `POST /api/scene-image` — body `{ prompt, identityLocks, settingContext, imageModel }`; returns a
-  720×1280 PNG from Z-Image-Turbo (Modal or RunPod), plus debug headers with the final styled prompt,
-  dimensions, cache status, model, and timing. `settingContext` carries the story's country/region
-  and era into the final prompt.
+  `{ visualPrompt, presentCharacterIds, environment, sceneShift, identityLocks, meta }` from the
+  visual director. An explicit `presentCharacterIds: []` means the frame has no people.
+- `POST /api/scene-image` — body
+  `{ prompt, identityLocks, settingContext, environment, sceneShift, previousPrompt, imageModel }`;
+  returns a 720×1280 PNG from Z-Image-Turbo (Modal or RunPod), plus debug headers with the final
+  styled prompt, dimensions, cache status, model, scene shift, and timing. `settingContext` carries
+  the story's country/region and era into the final prompt. `environment` and `previousPrompt` are
+  background continuity references; `sceneShift: 'new-location'` tells the composer to ignore them
+  and rebuild the place from the new prompt.
 
 Messages have `type` values of `narration`, `character`, or `user`. Character messages carry a
 `characterId` from the cast.
@@ -194,10 +204,11 @@ Messages have `type` values of `narration`, `character`, or `user`. Character me
 
 - The browser never talks to Venice or Modal directly. All inference is proxied through
   `server.mjs`; the Venice key stays server-side.
-- Generated scene images are cached by prompt hash in `.cache/scene-images/`, so refreshes and
-  repeat prompts load instantly without spending GPU time. Image prompts are wrapped in a
-  realism-first photographic treatment and rendered in 9:16 so the scene art reads as a still from
-  a real film.
+- Generated scene images are cached by a hash of the fully composed prompt (including identity
+  locks and background continuity) in `.cache/scene-images/`, so refreshes and repeat prompts load
+  instantly without spending GPU time. Image prompts are wrapped in a realism-first photographic
+  treatment, kept under the provider's prompt budget so identity locks are not truncated, and
+  rendered in 9:16 so the scene art reads as a still from a real film.
 - Debug logs live only in the current browser tab and are cleared when a new story begins.
 - `.env.local`, build output, `.cache/`, and `.screenshots/` are git-ignored.
 - The text model can be swapped without touching the frontend, for example

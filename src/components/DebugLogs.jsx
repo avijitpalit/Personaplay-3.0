@@ -149,7 +149,13 @@ export default function DebugLogs({
         identityLocks,
         presentCharacterIds,
         planningTimeMs: promptLog?.details?.durationMs || null,
-        plannerResponse: promptLog?.details?.response || null
+        plannerResponse: promptLog?.details?.response || null,
+        sceneShift:
+          appliedLog?.details?.sceneShift || promptLog?.details?.sceneShift || session.sceneShift || 'continue',
+        environment:
+          appliedLog?.details?.environment || promptLog?.details?.environment || session.sceneEnvironment || '',
+        previousPrompt:
+          appliedLog?.details?.previousPrompt || session.scenePreviousImagePrompt || ''
       },
       image: {
         status: sceneImageStatus,
@@ -164,6 +170,9 @@ export default function DebugLogs({
         imageId: imageDetails.imageId || null,
         requestPrompt: imageDetails.requestPrompt || scenePrompt,
         settingContext: imageDetails.settingContext || '',
+        sceneShift: imageDetails.sceneShift || session.sceneShift || 'continue',
+        environment: imageDetails.environment || session.sceneEnvironment || '',
+        previousPrompt: imageDetails.previousPrompt || session.scenePreviousImagePrompt || '',
         clientDurationMs: imageDetails.durationMs || null,
         serverDurationMs: imageDetails.serverDurationMs || null,
         bytes: imageDetails.bytes || null,
@@ -364,7 +373,10 @@ export default function DebugLogs({
             <Field label="Server image time" value={image.serverDurationMs ? `${image.serverDurationMs} ms` : '—'} />
             <Field label="Image bytes" value={image.bytes} />
             <Field label="Setting context sent" value={image.settingContext} wide />
+            <Field label="Background mode" value={image.sceneShift === 'new-location' ? 'new location' : 'continuity'} />
+            <Field label="Environment anchor" value={snapshot.scenePrompt.environment} wide />
             <Field label="Visible NPC IDs" value={snapshot.scenePrompt.presentCharacterIds.join(', ')} wide />
+            <Field label="Previous frame prompt" value={snapshot.scenePrompt.previousPrompt} wide />
           </div>
 
           <div className="debug-prompt">
