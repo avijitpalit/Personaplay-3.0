@@ -10,13 +10,14 @@
     "preview": "npm run build && node server.mjs --prod"
   },
   "dependencies": {
-    "@fontsource/instrument-serif": "^5.1.1",
     "@fontsource-variable/manrope": "^5.1.1",
+    "@fontsource/instrument-serif": "^5.1.1",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",

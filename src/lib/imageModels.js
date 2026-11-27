@@ -10,6 +10,12 @@ export const IMAGE_MODELS = [
     label: 'Z-Image-Turbo · RunPod',
     provider: 'RunPod',
     description: 'Alternate serverless endpoint with the same Z-Image-Turbo model. Queued jobs can take longer.'
+  },
+  {
+    id: 'venice-z-image-turbo',
+    label: 'Z-Image-Turbo · Venice AI',
+    provider: 'Venice',
+    description: 'Venice-hosted Z-Image-Turbo. Venice returns a portrait frame that is cropped to the app’s exact 9:16 720×1280 output.'
   }
 ];
 
