@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Copy, Terminal, Trash2, X } from 'lucide-react';
+import { Check, Copy, Download, Terminal, Trash2, X } from 'lucide-react';
 
 function latestLog(logs, scope, message) {
   for (let index = logs.length - 1; index >= 0; index -= 1) {
@@ -53,6 +53,9 @@ export default function DebugLogs({
   const closeRef = useRef(null);
   const onCloseRef = useRef(onClose);
   const [copied, setCopied] = useState(false);
+  const [downloadOpen, setDownloadOpen] = useState(false);
+  const [debugNote, setDebugNote] = useState('');
+  const [fileName, setFileName] = useState('');
   const copyTimerRef = useRef(null);
 
   useEffect(() => {
@@ -62,12 +65,17 @@ export default function DebugLogs({
   useEffect(() => {
     if (!open) return undefined;
     const onKeyDown = (event) => {
-      if (event.key === 'Escape') onCloseRef.current();
+      if (event.key !== 'Escape') return;
+      if (downloadOpen) {
+        setDownloadOpen(false);
+      } else {
+        onCloseRef.current();
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     requestAnimationFrame(() => closeRef.current?.focus());
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open]);
+  }, [open, downloadOpen]);
 
   useEffect(() => () => {
     if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current);
@@ -128,6 +136,8 @@ export default function DebugLogs({
       story: session.story,
       protagonist: session.story?.protagonist,
       characters: session.characters,
+      initialStory:
+        session.initialStory || storyLog?.details?.request?.prompt || '',
       latestUserMessage: latestUserMessage?.text || '',
       latestReply: latestCharacterMessages,
       messageCount: session.messages.length,
@@ -174,6 +184,32 @@ export default function DebugLogs({
     }
   };
 
+  const openDownload = () => {
+    if (!snapshot) return;
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    setDebugNote('');
+    setFileName(`personaplay-turn-${snapshot.turn}-${stamp}.json`);
+    setDownloadOpen(true);
+  };
+
+  const downloadSnapshot = () => {
+    if (!snapshot) return;
+    const safeName =
+      fileName.trim().replace(/[\\/:*?"<>|\u0000-\u001F]/g, '-') ||
+      `personaplay-turn-${snapshot.turn}.json`;
+    const payload = { ...snapshot, debugNote: debugNote.trim() };
+    const blob = new Blob([jsonText(payload)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = safeName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1200);
+    setDownloadOpen(false);
+  };
+
   if (!open || !snapshot) return null;
 
   const image = snapshot.image;
@@ -214,6 +250,16 @@ export default function DebugLogs({
           >
             <Trash2 size={14} />
             <span>Clear</span>
+          </button>
+          <button
+            className="debug-panel__tool"
+            type="button"
+            onClick={openDownload}
+            aria-label="Download debug snapshot"
+            title="Download snapshot with a note"
+          >
+            <Download size={14} />
+            <span>Download</span>
           </button>
           <button
             ref={closeRef}
@@ -259,6 +305,7 @@ export default function DebugLogs({
         <section className="debug-section">
           <h3>Story</h3>
           <div className="debug-grid">
+            <Field label="Initial story" value={snapshot.initialStory} wide />
             <Field label="Title" value={story.title} />
             <Field label="Genre" value={story.genre} />
             <Field label="Country / region" value={story.country} />
@@ -340,26 +387,70 @@ export default function DebugLogs({
           )}
         </section>
 
-        <section className="debug-section">
-          <h3>Raw data</h3>
-          <details className="debug-raw">
-            <summary>Complete snapshot JSON</summary>
-            <pre>{jsonText(snapshot)}</pre>
-          </details>
-          <details className="debug-raw">
-            <summary>Recent event trace ({logs.length})</summary>
-            <pre>
-              {logs
-                .slice(-40)
-                .map(
-                  (entry) =>
-                    `${new Date(entry.at).toLocaleTimeString('en-GB', { hour12: false })}  ${entry.scope}  ${entry.message}`
-                )
-                .join('\n')}
-            </pre>
-          </details>
-        </section>
       </div>
+
+      {downloadOpen && (
+        <div className="debug-download-layer">
+          <div
+            className="debug-download-layer__scrim"
+            onClick={() => setDownloadOpen(false)}
+            aria-hidden="true"
+          />
+          <section
+            className="debug-download"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="debug-download-title"
+          >
+            <header className="debug-download__header">
+              <div>
+                <span className="debug-download__eyebrow">Snapshot export</span>
+                <h3 id="debug-download-title">Download debug JSON</h3>
+              </div>
+              <button
+                className="debug-download__close"
+                type="button"
+                onClick={() => setDownloadOpen(false)}
+                aria-label="Close download dialog"
+              >
+                <X size={16} aria-hidden="true" />
+              </button>
+            </header>
+            <div className="debug-download__body">
+              <label className="debug-download__field">
+                <span>Debug note</span>
+                <textarea
+                  value={debugNote}
+                  onChange={(event) => setDebugNote(event.target.value.slice(0, 1200))}
+                  rows={3}
+                  placeholder="What were you testing or noticing?"
+                />
+              </label>
+              <label className="debug-download__field">
+                <span>File name</span>
+                <input
+                  value={fileName}
+                  onChange={(event) => setFileName(event.target.value.slice(0, 140))}
+                  spellCheck="false"
+                />
+              </label>
+              <div className="debug-download__actions">
+                <button
+                  className="button button--quiet"
+                  type="button"
+                  onClick={() => setDownloadOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button className="button button--warm" type="button" onClick={downloadSnapshot}>
+                  <Download size={14} aria-hidden="true" />
+                  Download JSON
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
     </aside>
   );
 }

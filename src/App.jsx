@@ -5,6 +5,7 @@ import Chat from './components/Chat.jsx';
 import SettingsPanel from './components/SettingsPanel.jsx';
 import { createScenePrompt, createStory, continueStory } from './lib/api.js';
 import { loadImageModel, saveImageModel } from './lib/imageModels.js';
+import { loadLanguageModel, saveLanguageModel } from './lib/languageModels.js';
 import {
   clearSession,
   identityLocksFor,
@@ -36,6 +37,7 @@ export default function App() {
   const [isReplying, setIsReplying] = useState(false);
   const [scenePromptBusy, setScenePromptBusy] = useState(false);
   const [imageModel, setImageModel] = useState(loadImageModel);
+  const [languageModel, setLanguageModel] = useState(loadLanguageModel);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [logs, setLogs] = useState(() => [
     {
@@ -112,7 +114,10 @@ export default function App() {
     });
 
     try {
-      const result = await createScenePrompt({ story, characters, messages }, { signal });
+      const result = await createScenePrompt(
+        { story, characters, messages, languageModel },
+        { signal }
+      );
       const visualPrompt = result.visualPrompt?.trim() || fallbackPrompt || '';
       const presentCharacterIds = Array.isArray(result.presentCharacterIds)
         ? result.presentCharacterIds
@@ -251,7 +256,10 @@ export default function App() {
     });
 
     try {
-      const result = await createStory(prompt, { signal: controller.signal });
+      const result = await createStory(prompt, {
+        signal: controller.signal,
+        languageModel
+      });
       if (controller.signal.aborted) return;
 
       addLog({
@@ -265,7 +273,7 @@ export default function App() {
         }
       });
 
-      const nextSession = makeSession(result.story, result.characters);
+      const nextSession = makeSession(result.story, result.characters, prompt);
       let plan = {
         visualPrompt: result.story.visualPrompt || '',
         identityLocks: identityLocksFor(nextSession.characters),
@@ -350,7 +358,8 @@ export default function App() {
         {
           story: snapshot.story,
           characters: snapshot.characters,
-          messages: snapshot.messages
+          messages: snapshot.messages,
+          languageModel
         },
         { signal: controller.signal }
       );
@@ -498,11 +507,24 @@ export default function App() {
     });
   };
 
+  const handleLanguageModelChange = (nextModel) => {
+    setLanguageModel(nextModel);
+    saveLanguageModel(nextModel);
+    addLog({
+      scope: 'settings',
+      level: 'info',
+      message: 'Language model changed',
+      details: { languageModel: nextModel }
+    });
+  };
+
   const settingsPanel = (
     <SettingsPanel
       open={settingsOpen}
       imageModel={imageModel}
       onImageModelChange={handleImageModelChange}
+      languageModel={languageModel}
+      onLanguageModelChange={handleLanguageModelChange}
       onClose={() => setSettingsOpen(false)}
     />
   );

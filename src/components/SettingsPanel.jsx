@@ -1,11 +1,20 @@
 import { useEffect, useRef } from 'react';
-import { Image, Settings, X } from 'lucide-react';
+import { Bot, Image, Settings, X } from 'lucide-react';
 import { IMAGE_MODELS, getImageModel } from '../lib/imageModels.js';
+import { LANGUAGE_MODELS, getLanguageModel } from '../lib/languageModels.js';
 
-export default function SettingsPanel({ open, imageModel, onImageModelChange, onClose }) {
+export default function SettingsPanel({
+  open,
+  imageModel,
+  onImageModelChange,
+  languageModel,
+  onLanguageModelChange,
+  onClose
+}) {
   const closeRef = useRef(null);
   const onCloseRef = useRef(onClose);
   const selected = getImageModel(imageModel);
+  const selectedLanguage = getLanguageModel(languageModel);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -51,6 +60,29 @@ export default function SettingsPanel({ open, imageModel, onImageModelChange, on
         <div className="settings-panel__body">
           <div className="settings-field">
             <div className="settings-field__label-row">
+              <label htmlFor="language-model-select">
+                <Bot size={14} aria-hidden="true" />
+                Language model
+              </label>
+              <span className="settings-field__value">{selectedLanguage.provider}</span>
+            </div>
+            <select
+              id="language-model-select"
+              className="settings-select"
+              value={selectedLanguage.id}
+              onChange={(event) => onLanguageModelChange(event.target.value)}
+            >
+              {LANGUAGE_MODELS.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.label}
+                </option>
+              ))}
+            </select>
+            <p className="settings-field__help">{selectedLanguage.description}</p>
+          </div>
+
+          <div className="settings-field">
+            <div className="settings-field__label-row">
               <label htmlFor="image-model-select">
                 <Image size={14} aria-hidden="true" />
                 Image generation model
@@ -78,8 +110,8 @@ export default function SettingsPanel({ open, imageModel, onImageModelChange, on
           </div>
 
           <p className="settings-note">
-            The choice is saved on this device. Switching models repaints the current scene with the
-            same prompt and character identity locks.
+            Choices are saved on this device. The language model applies to the next story or reply;
+            switching the image model repaints the current scene with the same prompt and identity locks.
           </p>
         </div>
       </section>

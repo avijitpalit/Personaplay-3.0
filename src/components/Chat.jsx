@@ -147,6 +147,25 @@ function NarrationMessage({ message }) {
   );
 }
 
+function legacySpeech(text) {
+  const match = text.trim().match(/^\(([\s\S]*)\)$/);
+  if (!match) return text;
+  const inner = match[1].trim();
+  if (!inner || inner.includes('(') || inner.includes(')')) return text;
+
+  const starter = inner.split(/\s+/)[0]?.toLowerCase() || '';
+  const dialogueStarters = new Set([
+    'ah', 'oh', 'you', 'i', 'we', 'what', 'why', 'how', 'no', 'yes', 'just',
+    'so', 'well', 'come', 'don’t', "don't", 'stop', 'please', 'thank', 'sorry',
+    'tell', 'look', 'listen', 'wait'
+  ]);
+  const hasDialoguePunctuation = /[?!]/.test(inner);
+  const hasFirstPerson = /\b(?:i|you|we|my|your|our|me|us)\b/i.test(inner);
+  return dialogueStarters.has(starter) || (hasDialoguePunctuation && hasFirstPerson)
+    ? inner
+    : text;
+}
+
 function CharacterMessage({ message, character }) {
   if (!character) return null;
   return (
@@ -161,7 +180,7 @@ function CharacterMessage({ message, character }) {
           )}
         </header>
         <p className="character-message__text">
-          <MessageText text={message.text} />
+          <MessageText text={legacySpeech(message.text)} />
         </p>
       </div>
     </article>
@@ -169,6 +188,18 @@ function CharacterMessage({ message, character }) {
 }
 
 function UserMessage({ message }) {
+  if (/^\.+$/.test(message.text.trim())) {
+    return (
+      <div className="user-message user-message--continue">
+        <span className="user-message__label">You</span>
+        <span className="user-message__continue">
+          <span aria-hidden="true">↳</span>
+          Continue
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="user-message">
       <span className="user-message__label">You</span>
@@ -362,15 +393,6 @@ export default function Chat({
             >
               <Settings size={14} aria-hidden="true" />
               <span aria-hidden="true">Settings</span>
-            </button>
-            <button
-              className="button button--quiet chat-header__new"
-              type="button"
-              onClick={openNewStory}
-              aria-label="Begin a new story"
-            >
-              <RotateCcw size={14} aria-hidden="true" />
-              <span aria-hidden="true">New story</span>
             </button>
           </div>
         </header>

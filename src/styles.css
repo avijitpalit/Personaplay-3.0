@@ -2041,10 +2041,10 @@ em {
 
 .narration-message {
   position: relative;
-  max-width: 640px;
+  max-width: 680px;
   margin: 0 auto 34px;
   padding: 0 20px;
-  color: #aca297;
+  color: #c4baad;
   text-align: center;
   animation: messageIn 460ms var(--ease-out) both;
 }
@@ -2063,11 +2063,12 @@ em {
 
 .narration-message p {
   margin: 0;
-  font-family: var(--serif);
-  font-size: 18px;
-  font-style: italic;
-  font-weight: 400;
-  line-height: 1.68;
+  color: #c4baad;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-style: normal;
+  font-weight: 430;
+  line-height: 1.8;
   letter-spacing: 0.002em;
   white-space: pre-wrap;
 }
@@ -2184,6 +2185,32 @@ em {
   font-weight: 650;
   letter-spacing: 0.15em;
   text-transform: uppercase;
+}
+
+.user-message--continue {
+  margin-top: -14px;
+  margin-bottom: 18px;
+}
+
+.user-message__continue {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid rgba(238, 225, 207, 0.1);
+  border-radius: 999px;
+  color: #8f8478;
+  background: rgba(255, 255, 255, 0.02);
+  font-family: var(--serif);
+  font-size: 11px;
+  font-style: italic;
+}
+
+.user-message__continue > span {
+  color: var(--amber);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-style: normal;
 }
 
 .user-message__bubble {
@@ -4072,6 +4099,10 @@ em {
   background: rgba(255, 255, 255, 0.018);
 }
 
+.settings-field + .settings-field {
+  margin-top: 10px;
+}
+
 .settings-field__label-row {
   display: flex;
   align-items: center;
@@ -4183,7 +4214,7 @@ em {
   }
 
   .chat-header h1 {
-    max-width: 42vw;
+    max-width: 56vw;
   }
 
   .settings-layer {
@@ -4206,5 +4237,143 @@ em {
 
   .settings-panel__body {
     padding: 15px 16px 18px;
+  }
+}
+
+/* Snapshot download dialog ---------------------------------------- */
+
+.debug-download-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.debug-download-layer__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 4, 7, 0.72);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+
+.debug-download {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 360px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  border: 1px solid rgba(238, 225, 207, 0.14);
+  border-radius: 14px;
+  background:
+    radial-gradient(300px 180px at 100% 0, rgba(232, 173, 120, 0.07), transparent 70%),
+    linear-gradient(180deg, #17131a, #0d0b11);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.58);
+  animation: settingsIn 220ms var(--ease-out) both;
+}
+
+.debug-download__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.debug-download__eyebrow {
+  color: var(--amber);
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.debug-download__header h3 {
+  margin: 6px 0 0;
+  color: var(--ink-strong);
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.debug-download__close {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.debug-download__close:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.debug-download__body {
+  padding: 14px 16px 16px;
+}
+
+.debug-download__field {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.debug-download__field > span {
+  display: block;
+  margin-bottom: 5px;
+  color: #b5a898;
+  font-size: 7.5px;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.debug-download__field input,
+.debug-download__field textarea {
+  width: 100%;
+  padding: 8px 9px;
+  border: 1px solid rgba(238, 225, 207, 0.13);
+  border-radius: 7px;
+  color: #ddd2c4;
+  background: #100e13;
+  font-family: var(--sans);
+  font-size: 11px;
+  line-height: 1.5;
+  outline: none;
+  resize: vertical;
+}
+
+.debug-download__field input:focus,
+.debug-download__field textarea:focus {
+  border-color: rgba(232, 173, 120, 0.42);
+  box-shadow: 0 0 0 3px rgba(232, 173, 120, 0.08);
+}
+
+.debug-download__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+  margin-top: 4px;
+}
+
+@media (max-width: 760px) {
+  .debug-download-layer {
+    position: fixed;
+    z-index: 220;
+    padding: 14px;
+  }
+
+  .debug-download {
+    max-width: 100%;
   }
 }

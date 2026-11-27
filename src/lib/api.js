@@ -39,14 +39,14 @@ async function request(path, body, { signal } = {}) {
   return data;
 }
 
-export function createStory(prompt, options) {
-  return request('/api/story', { prompt }, options);
+export function createStory(prompt, { signal, languageModel } = {}) {
+  return request('/api/story', { prompt, languageModel }, { signal });
 }
 
-export function continueStory({ story, characters, messages }, options) {
-  return request('/api/story/reply', { story, characters, messages }, options);
+export function continueStory({ story, characters, messages, languageModel }, { signal } = {}) {
+  return request('/api/story/reply', { story, characters, messages, languageModel }, { signal });
 }
 
-export function createScenePrompt({ story, characters, messages }, options) {
-  return request('/api/scene-prompt', { story, characters, messages }, options);
+export function createScenePrompt({ story, characters, messages, languageModel }, { signal } = {}) {
+  return request('/api/scene-prompt', { story, characters, messages, languageModel }, { signal });
 }
